@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OCR 카메라</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <style>
+    body { min-height: 100dvh; display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+    h1 { margin: 0; font-size: 18px; }
+    #session-msg { padding: 10px 12px; border-radius: 8px; background: var(--panel); border-left: 3px solid var(--muted); }
+    #session-msg.ok { border-left-color: var(--green); }
+    #session-msg.bad { border-left-color: var(--rose); color: var(--rose); }
+    video { width: 100%; border-radius: var(--radius); background: #000; aspect-ratio: 9 / 16; object-fit: cover; }
+    #cam-start { padding: 12px; font-size: 16px; background: var(--blue); color: var(--bg); font-weight: 700; }
+    #cam-info { font: 12px var(--mono); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h1>OCR 카메라</h1>
+  <!-- 세션 확인·오류 표시: A (js/mobile-session.js) -->
+  <div id="session-msg">세션 확인 중…</div>
+  <!-- 카메라·프레임 전송: B (js/camera.js) -->
+  <video id="cam-video" playsinline muted autoplay></video>
+  <button id="cam-start" type="button" disabled>카메라 시작</button>
+  <div id="cam-info"></div>
+
+  <script src="/static/js/mobile-session.js"></script>
+  <script src="/static/js/camera.js"></script>
+</body>
+</html>

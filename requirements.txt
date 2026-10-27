@@ -1,0 +1,5 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+segno>=1.6
+cryptography>=43
+python-dotenv>=1.0
