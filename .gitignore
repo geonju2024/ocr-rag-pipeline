@@ -1,0 +1,15 @@
+docs/
+
+# 로컬 환경
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# 실행 중 생기는 파일
+certs/
+captures/
+models/
+*.db
+*.sqlite
+chroma/

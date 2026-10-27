@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OCR-RAG 대시보드</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <style>
+    header { padding: 18px 24px 0; display: flex; align-items: baseline; gap: 12px; }
+    header h1 { margin: 0; font-size: 18px; }
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.3fr) minmax(320px, 1.3fr);
+      gap: 16px;
+      padding: 16px 24px 24px;
+      align-items: start;
+    }
+    @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 16px; } }
+
+    /* ① QR */
+    #zone-qr .zone-no { background: var(--blue); }
+    .qr-box {
+      align-self: center;
+      width: 100%; max-width: 260px; aspect-ratio: 1;
+      background: #fff; border-radius: 8px;
+      display: grid; place-items: center; position: relative;
+    }
+    .qr-box img { width: 100%; height: 100%; display: block; }
+    .qr-box.paired img { opacity: .12; }
+    .qr-box .overlay {
+      position: absolute; inset: 0; display: none; place-items: center;
+      color: var(--bg); font-weight: 700; font-size: 18px; text-align: center;
+    }
+    .qr-box.paired .overlay { display: grid; }
+    .qr-url { font: 12px var(--mono); color: var(--muted); word-break: break-all; }
+    .qr-row { display: flex; gap: 8px; align-items: center; }
+    .qr-row span { flex: 1; }
+
+    /* ⑤ 현황 */
+    #zone-status .zone-no { background: var(--green); }
+    .count { display: flex; align-items: baseline; gap: 8px; }
+    .count b { font-size: 48px; line-height: 1; color: var(--green); font-variant-numeric: tabular-nums; }
+    .count span { font-size: 20px; color: var(--muted); }
+    .bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+    .bar i { display: block; height: 100%; width: 0; background: var(--green); transition: width .4s; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .metrics div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+    .metrics b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+    .metrics small { color: var(--muted); font-size: 12px; }
+    .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .feed li { background: var(--bg); border-radius: 8px; padding: 8px 12px; border-left: 3px solid var(--green); }
+    .feed li.fresh { animation: fresh 1.2s ease-out; }
+    @keyframes fresh { from { background: color-mix(in srgb, var(--green) 25%, var(--bg)); } }
+    .feed .t { display: flex; gap: 8px; }
+    .feed .no { font: 600 13px var(--mono); color: var(--green); }
+    .feed .title { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feed .time { font-size: 12px; color: var(--muted); }
+    .feed .preview { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feed .empty { border-left-color: var(--line); color: var(--muted); }
+    .last-error { font-size: 12px; color: var(--rose); min-height: 1em; }
+
+    /* ⑥ RAG — 영역 안은 D 담당 */
+    #zone-rag .zone-no { background: var(--violet); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>OCR · 벡터 임베딩 파이프라인</h1>
+    <span class="muted">대시보드</span>
+  </header>
+
+  <main>
+    <!-- ① QR 카메라 연동 (A) -->
+    <section class="zone" id="zone-qr">
+      <div class="zone-head">
+        <span class="zone-no">1</span><h2>QR 카메라 연동</h2>
+        <span class="badge" id="qr-badge">준비 중</span>
+      </div>
+      <div class="qr-box" id="qr-box">
+        <img id="qr-img" alt="휴대폰으로 스캔할 QR 코드">
+        <div class="overlay">휴대폰<br>연결됨</div>
+      </div>
+      <div class="qr-row">
+        <span class="muted" id="qr-hint">휴대폰 카메라로 QR을 스캔하세요</span>
+        <button id="qr-new" type="button">새 QR</button>
+      </div>
+      <div class="qr-url" id="qr-url"></div>
+    </section>
+
+    <!-- ⑤ 실시간 저장 현황 (A) -->
+    <section class="zone" id="zone-status">
+      <div class="zone-head">
+        <span class="zone-no">5</span><h2>실시간 저장 현황</h2>
+        <span class="badge" id="live-badge">연결 중</span>
+      </div>
+      <div class="count"><b id="st-count">0</b><span>/ <span id="st-total">100</span> 저장</span></div>
+      <div class="bar" role="progressbar" aria-valuemin="0" id="st-bar"><i></i></div>
+      <div class="metrics">
+        <div><b id="st-fps">0</b><small>수신 FPS</small></div>
+        <div><b id="st-dup">0</b><small>중복</small></div>
+        <div><b id="st-drop">0</b><small>버린 프레임</small></div>
+        <div><b id="st-ocr">–</b><small>OCR ms</small></div>
+      </div>
+      <ul class="feed" id="st-feed"><li class="empty">아직 저장된 문서가 없습니다</li></ul>
+      <div class="last-error" id="st-error"></div>
+    </section>
+
+    <!-- ⑥ RAG 검색 (D: 이 section 안과 js/rag.js만 작성) -->
+    <section class="zone" id="zone-rag">
+      <div class="zone-head"><span class="zone-no">6</span><h2>RAG 검색</h2></div>
+    </section>
+  </main>
+
+  <script src="/static/js/status.js"></script>
+  <script src="/static/js/qr.js"></script>
+  <script src="/static/js/rag.js"></script>
+</body>
+</html>
